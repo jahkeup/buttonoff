@@ -1,61 +1,91 @@
 package main
 
 import (
+	"context"
 	"flag"
-	"time"
+	"sync"
 
 	butt "code.jahkeup.com/vcastle/buttonoff"
 	"github.com/Sirupsen/logrus"
 )
 
 var (
-	flagInterface  = flag.String("interface", "eth0", "Interface to listen on")
-	flagMQTTBroker = flag.String("broker", "tcp://127.0.0.1:1883", "MQTT Broker to publish to")
-	flagLogLevel   = flag.String("log", "INFO", "Log level to write out at")
+	flagInterface   = flag.String("interface", "", "Interface name to listen on")
+	flagMQTTBroker  = flag.String("broker", "", `MQTT Broker to publish to (ex: "tcp://127.0.0.1:1883")`)
+	flagLogLevel    = flag.String("log", "INFO", "Log level to write out at")
+	flagConfig      = flag.String("config", "./buttonoff.toml", "Configuration file")
+	flagWriteConfig = flag.Bool("overwrite-default", false, "Write default config to the -config path")
 )
 
 func main() {
 	flag.Parse()
+	logger := logrus.WithField("comp", "buttonoffd")
 
-	config := butt.Config{
-		General: butt.GeneralConfig{
-			DropUnconfigured: true,
-		},
-		Listener: butt.ListenerConfig{
-			Interface: *flagInterface,
-		},
-		MQTT: butt.MQTTConfig{
-			BrokerAddr: *flagMQTTBroker,
-		},
-		Buttons: []butt.ButtonConfig{
-			{
-				ButtonID: "test-button",
-				HWAddr:   "fc:a6:67:b1:24:41",
-			},
-		},
+	if *flagWriteConfig {
+		wrErr := writeDefaultConfig(*flagConfig)
+		if wrErr != nil {
+			logger.Fatal(wrErr)
+		}
+		return
+	}
+
+	config, err := LoadConfig(*flagConfig)
+	if err != nil {
+		logger.Fatalf("Could not load config from file %q", *flagConfig)
+		return
+	}
+
+	if *flagInterface != "" {
+		config.Listener.Interface = *flagInterface
+	}
+	if *flagMQTTBroker != "" {
+		config.MQTT.BrokerAddr = *flagMQTTBroker
 	}
 
 	level := logrus.InfoLevel
 	if parsedLevel, err := logrus.ParseLevel(*flagLogLevel); err == nil {
 		level = parsedLevel
 	} else {
-		logrus.Warn("Could not parse provided log level %q, falling back to %s", level)
+		logger.Warn("Could not parse provided log level %q, falling back to %s", level)
 	}
 	butt.SetLogLevel(level)
 
 	publisher, err := butt.NewMQTTPublisher(config.MQTT)
 	if err != nil {
-		logrus.Fatal(err)
+		logger.Fatal(err)
 	}
 	handler, err := butt.NewDashButtonEventHandler(config.General, config.Buttons, publisher)
 	if err != nil {
-		logrus.Fatal(err)
+		publisher.Close()
+		logger.Fatal(err)
 	}
 	listener, err := butt.NewPCAPListener(config.Listener)
 	if err != nil {
-		logrus.Fatal(err)
+		publisher.Close()
+		logger.Fatal(err)
 	}
-
 	listener.UseEventHandler(handler)
-	time.Sleep(time.Second * 60)
+
+	// Claiming ignorance to all failures.. keep running. Internally,
+	// these things will panic where we can't recover and otherwise
+	// retry indefinitely.
+	ctx := context.TODO()
+	runAll(ctx, listener, publisher)
+}
+
+type runnable interface {
+	Run(ctx context.Context) error
+}
+
+func runAll(ctx context.Context, runnables ...runnable) {
+	var wg sync.WaitGroup
+	for i := range runnables {
+		runner := runnables[i]
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			runner.Run(ctx)
+		}()
+	}
+	wg.Wait()
 }

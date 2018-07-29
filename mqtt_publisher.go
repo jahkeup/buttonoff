@@ -1,6 +1,7 @@
 package buttonoff
 
 import (
+	"context"
 	"net/url"
 	"time"
 
@@ -10,19 +11,23 @@ import (
 )
 
 const (
-	mqttClientID             = "buttonoff"
-	mqttPublishTimeout       = time.Second * 5
-	mqttConnectTimeout       = time.Second * 30
-	mqttMaxReconnectInterval = time.Minute * 5
+	mqttClientID              = "buttonoff"
+	mqttPublishTimeout        = time.Second * 5
+	mqttConnectTimeout        = time.Second * 30
+	mqttMaxReconnectInterval  = time.Minute * 5
+	mqttDisconnectAllowanceMS = 150
 )
 
 var (
 	MQTTPublishTimeoutErr = errors.Errorf("MQTT Publish timeout after %s", mqttPublishTimeout)
 	MQTTConnectTimeoutErr = errors.Errorf("MQTT Connect timeout after %s", mqttConnectTimeout)
+	MQTTDisconnectedErr   = errors.New("Disconnected from MQTT Broker")
 )
 
 type mqttPublisher interface {
 	Publish(topic string, qos byte, retained bool, payload interface{}) mqtt.Token
+	IsConnected() bool
+	Disconnect(waitMS uint)
 }
 
 type MQTTPublisher struct {
@@ -58,7 +63,34 @@ func NewMQTTPublisher(conf MQTTConfig) (*MQTTPublisher, error) {
 	return pub, nil
 }
 
+func (mp *MQTTPublisher) Run(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		mp.log.Info("Shutting down")
+		return mp.shutdown()
+	}
+}
+
+func (mp *MQTTPublisher) Close() error {
+	return mp.shutdown()
+}
+
+func (mp *MQTTPublisher) shutdown() error {
+	if mp.mqtt.IsConnected() {
+		mp.log.Debug("Disconnecting broker connection")
+		mp.mqtt.Disconnect(mqttDisconnectAllowanceMS)
+		mp.log.Debug("Disconnect request completed")
+	} else {
+		mp.log.Warn("Cannot disconnect, already disconnected")
+	}
+	return nil
+}
+
 func (mp *MQTTPublisher) Publish(msg Message) error {
+	if !mp.mqtt.IsConnected() {
+		return MQTTDisconnectedErr
+	}
+
 	token := mp.mqtt.Publish(msg.Topic, 0, false, msg.Payload)
 	complete := token.WaitTimeout(mqttPublishTimeout)
 	if !complete {

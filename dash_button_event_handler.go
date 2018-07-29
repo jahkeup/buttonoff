@@ -111,8 +111,8 @@ type dashButton struct {
 }
 
 type messagePayload struct {
-	ButtonID  string
-	Timestamp string
+	ButtonID  string `json:"button_id"`
+	Timestamp string `json:"timestamp"`
 }
 
 func (payload *messagePayload) ToJSONBytes() []byte {
