@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	DefaultDashButtonTopicTemplate = "/buttonoff/{{.ButtonID}}/pressed"
+	DefaultDashButtonTopicTemplate          = "/buttonoff/{{.ButtonID}}/pressed"
+	DefaultDashButtonPostPressSupressPeriod = time.Millisecond * 600
 )
 
 type DashButtonEventHandler struct {
@@ -43,7 +44,15 @@ func NewDashButtonEventHandler(general GeneralConfig, buttons []ButtonConfig, pu
 		return nil, buildErr
 	}
 
+	if general.PostPressSupressPeriod == 0 {
+		fallback := DefaultDashButtonPostPressSupressPeriod
+		logger.Warnf("No PostPressSupressPeriod defined, falling back to %s",
+			fallback)
+		general.PostPressSupressPeriod = fallback
+	}
+
 	limiter := NewPressRateLimiter(general.PostPressSupressPeriod)
+	logger.Debugf("Suppressing duplicate events for %s after press", general.PostPressSupressPeriod)
 
 	eh := &DashButtonEventHandler{
 		log:                logger,
@@ -59,11 +68,12 @@ func NewDashButtonEventHandler(general GeneralConfig, buttons []ButtonConfig, pu
 }
 
 func (d *DashButtonEventHandler) HandleEvent(e Event) error {
-	if !d.shouldAcceptEvent(e) {
-		d.log.Debugf("Dropping unacceptable event: %v", e)
-		return nil
+	if d.shouldAcceptEvent(e) {
+		d.log.Debugf("Handling accepted event: %v", e)
+		return d.publish(e)
 	}
-	return d.publish(e)
+	d.log.Debugf("Dropping unacceptable event: %v", e)
+	return nil
 }
 
 func (d *DashButtonEventHandler) publish(e Event) error {
@@ -89,6 +99,7 @@ func (d *DashButtonEventHandler) publish(e Event) error {
 }
 
 func (d *DashButtonEventHandler) shouldAcceptEvent(e Event) bool {
+	d.log.Debug("Checking limit for key %q", e.HWAddr)
 	return d.limiter.Accept(e.HWAddr)
 }
 
