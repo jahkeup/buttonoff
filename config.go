@@ -1,5 +1,9 @@
 package buttonoff
 
+import (
+	"time"
+)
+
 type Config struct {
 	General  GeneralConfig
 	Listener ListenerConfig
@@ -8,8 +12,9 @@ type Config struct {
 }
 
 type GeneralConfig struct {
-	TopicTemplate    string
-	DropUnconfigured bool
+	TopicTemplate          string
+	DropUnconfigured       bool
+	PostPressSupressPeriod time.Duration
 }
 
 type ListenerConfig struct {

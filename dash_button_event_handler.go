@@ -21,8 +21,10 @@ type DashButtonEventHandler struct {
 	topicTemplate *template.Template
 	publisher     Publisher
 
-	buttonRegistryLock sync.Mutex
+	buttonRegistryLock *sync.Mutex
 	buttonRegistry     map[string]dashButton
+
+	limiter Accepter
 }
 
 func NewDashButtonEventHandler(general GeneralConfig, buttons []ButtonConfig, publisher Publisher) (*DashButtonEventHandler, error) {
@@ -41,12 +43,16 @@ func NewDashButtonEventHandler(general GeneralConfig, buttons []ButtonConfig, pu
 		return nil, buildErr
 	}
 
+	limiter := NewPressRateLimiter(general.PostPressSupressPeriod)
+
 	eh := &DashButtonEventHandler{
-		log:            logger,
-		onlyKnown:      general.DropUnconfigured,
-		topicTemplate:  t,
-		publisher:      publisher,
-		buttonRegistry: buttonRegistry,
+		log:                logger,
+		onlyKnown:          general.DropUnconfigured,
+		topicTemplate:      t,
+		publisher:          publisher,
+		buttonRegistryLock: &sync.Mutex{},
+		buttonRegistry:     buttonRegistry,
+		limiter:            limiter,
 	}
 
 	return eh, err
@@ -65,7 +71,7 @@ func (d *DashButtonEventHandler) publish(e Event) error {
 
 	payload := messagePayload{
 		ButtonID:  buttonID,
-		Timestamp: e.Timestamp.Format(time.RFC3339),
+		Timestamp: e.Timestamp.Format(time.RFC3339Nano),
 	}
 
 	topic := bytes.NewBuffer(nil)
@@ -83,8 +89,7 @@ func (d *DashButtonEventHandler) publish(e Event) error {
 }
 
 func (d *DashButtonEventHandler) shouldAcceptEvent(e Event) bool {
-	// TODO: filter events here based on configuration and limit
-	return true
+	return d.limiter.Accept(e.HWAddr)
 }
 
 func (d *DashButtonEventHandler) getRegistryButtonID(e Event) string {
