@@ -131,7 +131,7 @@ func (cap *pcapCapture) processPacket(packet gopacket.Packet) {
 		return
 	}
 	dhcpReq := dhcpReqL.(*layers.DHCPv4)
-	cap.log.Debugf("Recieved a DHCP packet: %v", dhcpReq)
+	// cap.log.Debugf("Recieved a DHCP packet: %v", dhcpReq)
 	cap.log.Debugf("Packet from client %q", dhcpReq.ClientHWAddr)
 
 	event := Event{
