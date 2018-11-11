@@ -5,8 +5,8 @@ import (
 	"flag"
 	"sync"
 
-	butt "github.com/jahkeup/buttonoff"
 	"github.com/Sirupsen/logrus"
+	butt "github.com/jahkeup/buttonoff"
 )
 
 var (
@@ -46,7 +46,7 @@ func main() {
 	if parsedLevel, err := logrus.ParseLevel(*flagLogLevel); err == nil {
 		level = parsedLevel
 	} else {
-		logger.Warn("Could not parse provided log level %q, falling back to %s", level)
+		logger.Warnf("Could not parse provided log level %q, falling back to %s", *flagLogLevel, level)
 	}
 	butt.SetLogLevel(level)
 
