@@ -99,7 +99,7 @@ func (d *DashButtonEventHandler) publish(e Event) error {
 }
 
 func (d *DashButtonEventHandler) shouldAcceptEvent(e Event) bool {
-	d.log.Debug("Checking limit for key %q", e.HWAddr)
+	d.log.Debugf("Checking limit for key %q", e.HWAddr)
 	return d.limiter.Accept(e.HWAddr)
 }
 
@@ -135,7 +135,7 @@ func (payload *messagePayload) ToJSONBytes() []byte {
 	payloadJSON, marshalErr := json.Marshal(payload)
 	if marshalErr != nil {
 		logrus.Error(errors.Wrapf(marshalErr, "could not marshal message payload %v", payload))
-		logrus.Debug("Falling back to ButtonID as the message payload: %q", payload.ButtonID)
+		logrus.Debugf("Falling back to ButtonID as the message payload: %q", payload.ButtonID)
 		return []byte(payload.ButtonID)
 	}
 	return payloadJSON
