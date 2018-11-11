@@ -5,7 +5,7 @@ import (
 	"flag"
 	"sync"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	butt "github.com/jahkeup/buttonoff"
 )
 
