@@ -3,7 +3,7 @@ package main
 import (
 	"io/ioutil"
 
-	butt "code.jahkeup.com/vcastle/buttonoff"
+	butt "github.com/jahkeup/buttonoff"
 	"github.com/pelletier/go-toml"
 )
 
