@@ -81,6 +81,7 @@ func (d *DashButtonEventHandler) publish(e Event) error {
 
 	payload := messagePayload{
 		ButtonID:  buttonID,
+		HWAddr:    e.HWAddr,
 		Timestamp: e.Timestamp.Format(time.RFC3339Nano),
 	}
 
@@ -137,6 +138,7 @@ type dashButton struct {
 
 type messagePayload struct {
 	ButtonID  string `json:"button_id"`
+	HWAddr    string `json:"hwaddr"`
 	Timestamp string `json:"timestamp"`
 }
 
