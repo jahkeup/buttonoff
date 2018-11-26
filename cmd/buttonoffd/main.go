@@ -12,7 +12,7 @@ import (
 var (
 	flagInterface   = flag.String("interface", "", "Interface name to listen on")
 	flagMQTTBroker  = flag.String("broker", "", `MQTT Broker to publish to (ex: "tcp://127.0.0.1:1883")`)
-	flagLogLevel    = flag.String("log", "INFO", "Log level to write out at")
+	flagLogLevel    = flag.String("log-level", "INFO", "Log level to write out at")
 	flagConfig      = flag.String("config", "./buttonoff.toml", "Configuration file")
 	flagWriteConfig = flag.Bool("write-default", false, "Write default config to the -config path")
 )
