@@ -7,8 +7,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -94,13 +94,22 @@ func (d *DashButtonEventHandler) publish(e Event) error {
 		Topic:   topic.String(),
 		Payload: payload.ToJSONBytes(),
 	}
-
+	d.log.WithFields(logrus.Fields{
+		"button-id": buttonID,
+		"topic":     topic,
+	}).Debug("Publishing message for event")
 	return d.publisher.Publish(msg)
 }
 
 func (d *DashButtonEventHandler) shouldAcceptEvent(e Event) bool {
-	d.log.Debugf("Checking limit for key %q", e.HWAddr)
-	return d.limiter.Accept(e.HWAddr)
+	log := d.log.WithField("limit-key", e.HWAddr)
+	shouldAccept := d.limiter.Accept(e.HWAddr)
+	if shouldAccept {
+		log.Debug("Accepting event")
+	} else {
+		log.Debug("Rejecting event")
+	}
+	return shouldAccept
 }
 
 func (d *DashButtonEventHandler) getRegistryButtonID(e Event) string {
@@ -152,7 +161,7 @@ func buildButtonMap(buttons []ButtonConfig) (map[string]dashButton, error) {
 		id := butt.ButtonID
 		if id == "" {
 			id = hwaddr
-			logrus.Debugf("no ButtonID provided for button %d (%q), using %q", i, hwaddr, id)
+			logrus.Debugf("No ButtonID provided for button %d (%q), using %q", i, hwaddr, id)
 		}
 
 		translated := dashButton{

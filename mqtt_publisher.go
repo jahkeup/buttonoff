@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const (
