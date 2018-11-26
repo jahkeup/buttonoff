@@ -22,7 +22,7 @@ Configuration can be generated with:
 
 ```bash
 # Write a simple defualt config to ./generated-config.toml
-buttonffd -overwrite-default -config ./generated-config.toml
+buttonffd -write-default -config ./generated-config.toml
 ```
 
 Some flags can be overriden in the configuration file. See the

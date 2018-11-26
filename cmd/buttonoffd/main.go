@@ -14,7 +14,7 @@ var (
 	flagMQTTBroker  = flag.String("broker", "", `MQTT Broker to publish to (ex: "tcp://127.0.0.1:1883")`)
 	flagLogLevel    = flag.String("log", "INFO", "Log level to write out at")
 	flagConfig      = flag.String("config", "./buttonoff.toml", "Configuration file")
-	flagWriteConfig = flag.Bool("overwrite-default", false, "Write default config to the -config path")
+	flagWriteConfig = flag.Bool("write-default", false, "Write default config to the -config path")
 )
 
 func main() {
