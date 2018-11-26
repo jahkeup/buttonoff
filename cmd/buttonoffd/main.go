@@ -21,6 +21,15 @@ func main() {
 	flag.Parse()
 	logger := logrus.WithField("comp", "buttonoffd")
 
+	level := logrus.InfoLevel
+	if parsedLevel, err := logrus.ParseLevel(*flagLogLevel); err == nil {
+		level = parsedLevel
+	} else {
+		logger.Warnf("Could not parse provided log level %q, falling back to %s", *flagLogLevel, level)
+	}
+	logrus.SetLevel(level)
+	butt.SetLogLevel(level)
+
 	if *flagWriteConfig {
 		wrErr := writeDefaultConfig(*flagConfig)
 		if wrErr != nil {
@@ -35,7 +44,7 @@ func main() {
 		return
 	}
 
-	if logger.Level == logrus.DebugLevel {
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
 		for _, button := range config.Buttons {
 			logger.WithFields(logrus.Fields{
 				"HWAddr":   button.HWAddr,
@@ -50,14 +59,6 @@ func main() {
 	if *flagMQTTBroker != "" {
 		config.MQTT.BrokerAddr = *flagMQTTBroker
 	}
-
-	level := logrus.InfoLevel
-	if parsedLevel, err := logrus.ParseLevel(*flagLogLevel); err == nil {
-		level = parsedLevel
-	} else {
-		logger.Warnf("Could not parse provided log level %q, falling back to %s", *flagLogLevel, level)
-	}
-	butt.SetLogLevel(level)
 
 	publisher, err := butt.NewMQTTPublisher(config.MQTT)
 	if err != nil {
