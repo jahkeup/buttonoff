@@ -5,8 +5,8 @@ import (
 	"flag"
 	"sync"
 
-	"github.com/sirupsen/logrus"
 	butt "github.com/jahkeup/buttonoff"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -33,6 +33,15 @@ func main() {
 	if err != nil {
 		logger.Fatalf("Could not load config from file %q", *flagConfig)
 		return
+	}
+
+	if logger.Level == logrus.DebugLevel {
+		for _, button := range config.Buttons {
+			logger.WithFields(logrus.Fields{
+				"HWAddr":   button.HWAddr,
+				"ButtonID": button.ButtonID,
+			}).Debug("configured")
+		}
 	}
 
 	if *flagInterface != "" {
